@@ -112,13 +112,20 @@ const ageValidation = (request, response, next) => {
 };
 
 // Fonte regex: https://stackoverflow.com/questions/5465375/javascript-date-regex-dd-mm-yyyy
-const dateValidation = (request, response, next) => {
-  const dateValidation1 = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+
+const talkValidation = (request, response, next) => {
   const { talk } = request.body;
-  if (!talk || !talk.rate || !talk.watchedAt) {
+  if (!talk || talk.rate === undefined || talk.rate === '' || !talk.watchedAt) { // tive que alterar
     return response.status(400).json({
        message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios' });
   }
+  next();
+};
+
+const dateValidation = (request, response, next) => {
+  const dateValidation1 = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  const { talk } = request.body;
+
   if (!dateValidation1.test(talk.watchedAt)) {
     return response.status(400).json({ 
       message: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"' });
@@ -140,7 +147,8 @@ const rateValidation = (request, response, next) => {
 app.post('/talker', 
   auth, 
   nameValidation, 
-  ageValidation, 
+  ageValidation,
+  talkValidation, 
   dateValidation,
   rateValidation, 
   async (request, response) => {
@@ -157,6 +165,30 @@ app.post('/talker',
     talkers = [...talkers, newTalker];
     await fs.writeFile(talkersJson, JSON.stringify(talkers));
     return response.status(201).json(newTalker);
+  } catch (error) {
+    console.error(error.message);
+  }
+});
+
+// requisito 5
+app.put('/talker/:id', 
+  auth, 
+  nameValidation, 
+  ageValidation,
+  talkValidation, 
+  dateValidation,
+  rateValidation, 
+  async (request, response) => {
+  try {
+    const { id } = request.params;
+    const { name, age, talk } = request.body;
+    const readFile = await fs.readFile(talkersJson, 'utf-8'); 
+    const talkers = JSON.parse(readFile); 
+    
+    const talkerUpdate = talkers.findIndex((talker) => talker.id === Number(id));
+    talkers[talkerUpdate] = { ...talkers[talkerUpdate], name, age, talk };
+    await fs.writeFile(talkersJson, JSON.stringify(talkers)); 
+    response.status(200).json(talkers[talkerUpdate]);
   } catch (error) {
     console.error(error.message);
   }
