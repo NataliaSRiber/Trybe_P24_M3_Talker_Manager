@@ -117,7 +117,7 @@ const talkValidation = (request, response, next) => {
   const { talk } = request.body;
   if (!talk || talk.rate === undefined || talk.rate === '' || !talk.watchedAt) { // tive que alterar
     return response.status(400).json({
-       message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios' });
+      message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios' });
   }
   next();
 };
@@ -192,6 +192,22 @@ app.put('/talker/:id',
   } catch (error) {
     console.error(error.message);
   }
+});
+
+// requisito 6
+app.delete('/talker/:id', auth, async (request, response) => {
+  const { id } = request.params;
+  try {
+    const readFile = await fs.readFile(talkersJson, 'utf-8'); 
+    const talkers = JSON.parse(readFile);
+    const deleteTalker = talkers.filter((talker) => talker.id !== Number(id));
+    console.log(deleteTalker);
+    await fs.writeFile(talkersJson, JSON.stringify(deleteTalker));
+    return response.status(200).json({ 
+      message: 'Pessoa palestrante deletada com sucesso' });
+  } catch (error) {
+    console.error(error.message);
+  }  
 });
 
 app.listen(PORT, () => {
