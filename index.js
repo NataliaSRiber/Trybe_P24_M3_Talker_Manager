@@ -23,6 +23,45 @@ app.get('/talker', async (_request, response) => {
   response.status(HTTP_OK_STATUS).json(JSON.parse(talkers));
 });
 
+const crypto = require('crypto');
+// const { request } = require('http');
+
+function generateToken() {
+  return crypto.randomBytes(8).toString('hex');
+}
+
+const auth = (request, response, next) => {
+  const token = request.headers.authorization; // coloco no headers no insomnia e chamo aqui
+      
+  if (!token) return response.status(401).json({ message: 'Token não encontrado' });
+  if (token.length !== 16) {
+    return response.status(401).json({ message: 'Token inválido' });
+  }
+  next();
+};
+
+// requisito 7
+app.get('/talker/search', auth, async (request, response) => {
+  const { q } = request.query;
+  try {
+    const readFile = await fs.readFile(talkersJson, 'utf-8');
+    const talkers = JSON.parse(readFile);
+
+    if (!q) {
+      return response.status(HTTP_OK_STATUS).json(talkers);
+    }
+    
+    const getSearchItem = talkers
+      .filter((talker) => talker.name.toLowerCase().includes(q.toLowerCase()));
+    if (!getSearchItem) {
+      return response.status(HTTP_OK_STATUS).json([]);
+    }
+    return response.status(HTTP_OK_STATUS).json(getSearchItem);
+  } catch (error) {
+    console.error(error);
+  }
+});
+
 // requisito 2
 app.get('/talker/:id', async (request, response) => {
   const { id } = request.params;
@@ -36,12 +75,6 @@ app.get('/talker/:id', async (request, response) => {
 });
 
 // requisito 3
-const crypto = require('crypto');
-// const { request } = require('http');
-
-function generateToken() {
-  return crypto.randomBytes(8).toString('hex');
-}
 
 const emailValidation = (request, response, next) => {
   const { email } = request.body;
@@ -77,16 +110,6 @@ app.post('/login', emailValidation, passwordValidation, (_request, response) => 
 });
 
 // requisito 4
-const auth = (request, response, next) => {
-  const token = request.headers.authorization; // coloco no headers no insomia e chamo aqui
-      
-  if (!token) return response.status(401).json({ message: 'Token não encontrado' });
-  if (token.length !== 16) {
-    return response.status(401).json({ message: 'Token inválido' });
-  }
-  next();
-};
-
 const nameValidation = (request, response, next) => {
   const nameLength = 3;
   const { name } = request.body;
@@ -188,7 +211,7 @@ app.put('/talker/:id',
     const talkerUpdate = talkers.findIndex((talker) => talker.id === Number(id));
     talkers[talkerUpdate] = { ...talkers[talkerUpdate], name, age, talk };
     await fs.writeFile(talkersJson, JSON.stringify(talkers)); 
-    response.status(200).json(talkers[talkerUpdate]);
+    response.status(HTTP_OK_STATUS).json(talkers[talkerUpdate]);
   } catch (error) {
     console.error(error.message);
   }
@@ -201,9 +224,8 @@ app.delete('/talker/:id', auth, async (request, response) => {
     const readFile = await fs.readFile(talkersJson, 'utf-8'); 
     const talkers = JSON.parse(readFile);
     const deleteTalker = talkers.filter((talker) => talker.id !== Number(id));
-    console.log(deleteTalker);
     await fs.writeFile(talkersJson, JSON.stringify(deleteTalker));
-    return response.status(200).json({ 
+    return response.status(HTTP_OK_STATUS).json({ 
       message: 'Pessoa palestrante deletada com sucesso' });
   } catch (error) {
     console.error(error.message);
